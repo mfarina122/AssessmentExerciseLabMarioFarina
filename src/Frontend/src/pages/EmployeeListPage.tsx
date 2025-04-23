@@ -1,17 +1,6 @@
 import { useEffect, useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  TablePagination,
-  Paper,
-  Typography,
-  tableCellClasses,
-  styled
-} from "@mui/material";
+import { Container, Typography } from "@mui/material";
+import { DataTable, Column } from "../components/DataTable"; // Aggiusta il percorso in base alla tua struttura
 
 interface department {
   code: string;
@@ -21,70 +10,118 @@ interface department {
 interface EmployeeListQuery {
   address: string;
   code: string;
-  department: department;
+  department: department | null;
   email: string;
   firstName: string;
   id: number,
   lastName: string,
   phone: string,
 }
-
-export default function EmployeeListPage() {
-  const [list, setList] = useState<EmployeeListQuery[]>([]);
-  
-  useEffect(() => {
-    fetch("/api/employees/list")
-      .then((response) => {
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Ciao dati: ")
-        console.log(data);
-        setList(data as EmployeeListQuery[]);
-      });
-  }, []);
-   
-  return (
-    <>
-      <Typography variant="h4" sx={{ textAlign: "center", mt: 4, mb: 4 }}>
-        Employees
-      </Typography>
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
-          <TableHead>
-            <TableRow>
-              <StyledTableHeadCell>Name</StyledTableHeadCell>
-              <StyledTableHeadCell>Code</StyledTableHeadCell>
-              <StyledTableHeadCell>Department</StyledTableHeadCell>
-              <StyledTableHeadCell>Address</StyledTableHeadCell>
-              <StyledTableHeadCell>Email</StyledTableHeadCell>
-              <StyledTableHeadCell>Phone</StyledTableHeadCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {list.map((row) => (
-              <TableRow
-                key={row.id}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell>{`${row.firstName} ${row.lastName}`}</TableCell>
-                <TableCell>{row.code}</TableCell>
-                <TableCell>{row.department ? row.department.description : '-'}</TableCell>
-                <TableCell>{row.address}</TableCell>
-                <TableCell>{row.email}</TableCell>
-                <TableCell>{row.phone}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </>
-  );
+interface Filter {
+  columnId: string;
+  value: string;
 }
 
-const StyledTableHeadCell = styled(TableCell)(({ theme }) => ({
-  [`&.${tableCellClasses.head}`]: {
-    backgroundColor: theme.palette.primary.light,
-    color: theme.palette.common.white,
-  },
-}));
+export default function EmployeeListPage() {
+  const [filteredList, setFilteredList] = useState<EmployeeListQuery[]>([]);
+  const [filters, setFilters] = useState<Filter[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const columns: Column<EmployeeListQuery>[] = [
+    {
+      id: 'firstName',
+      label: 'First Name',
+      width: 120,
+      renderCell: (employee) => employee.firstName,
+      filterable: true,
+      getValue: (employee) => employee.firstName
+    },
+    {
+      id: 'lastName',
+      label: 'Last Name',
+      width: 120,
+      renderCell: (employee) => employee.lastName,
+      filterable: true,
+      getValue: (employee) => employee.lastName
+    },
+    {
+      id: 'code',
+      label: 'Code',
+      width: 100,
+      renderCell: (employee) => employee.code,
+      filterable: false,
+      getValue: (employee) => employee.code
+    },
+    {
+      id: 'department',
+      label: 'Department',
+      width: 150,
+      renderCell: (employee) => employee.department ? employee.department.description : '-',
+      filterable: false,
+      getValue: (employee) => employee.department ? employee.department.description : ''
+    },
+    {
+      id: 'address',
+      label: 'Address',
+      width: 200,
+      renderCell: (employee) => employee.address,
+      filterable: false,
+      getValue: (employee) => employee.address
+    },
+    {
+      id: 'email',
+      label: 'Email',
+      width: 200,
+      renderCell: (employee) => employee.email,
+      filterable: false,
+      getValue: (employee) => employee.email
+    },
+    {
+      id: 'phone',
+      label: 'Phone',
+      width: 120,
+      renderCell: (employee) => employee.phone,
+      filterable: false,
+      getValue: (employee) => employee.phone
+    }
+  ];
+
+  // Fetch iniziale
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/employees/list")
+      .then((response) => response.json())
+      .then((data: EmployeeListQuery[]) => {
+        setFilteredList(data); // iniziale = tutti
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error fetching employees:", error);
+        alert("Attenzione, errore nel recupero dati!");
+        setLoading(false);
+      });
+  }, []);
+
+  // Logica di filtro esterno
+  useEffect(() => {
+    console.log("TODO: mi servono i filtri")
+  }, [filters]);
+
+  return (
+    <Container maxWidth="xl">
+      <Typography variant="h4" sx={{ p: 2, textAlign: 'center' }}>
+        Employee
+      </Typography>
+      {loading ? (
+        <div>Caricamento...</div>
+      ) : (
+        <DataTable
+          filteredData={filteredList} // Usiamo i dati filtrati
+          columns={columns}
+          keyExtractor={(employee) => employee.id}
+          onFilterChange={setFilters} // Comunica i filtri in uscita
+        />
+      )}
+    </Container>
+  );
+}
