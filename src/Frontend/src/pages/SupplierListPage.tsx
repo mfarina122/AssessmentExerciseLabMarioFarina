@@ -1,16 +1,6 @@
-import {
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-  styled,
-  tableCellClasses,
-} from "@mui/material";
 import { useEffect, useState } from "react";
+import { Container, Typography } from "@mui/material";
+import { DataTable, Column } from "../components/DataTable";
 
 interface SupplierListQuery {
   id: number;
@@ -22,55 +12,62 @@ interface SupplierListQuery {
 
 export default function SupplierListPage() {
   const [list, setList] = useState<SupplierListQuery[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Definizione delle colonne per la DataTable
+  const columns: Column<SupplierListQuery>[] = [
+    {
+      id: 'name',
+      label: 'Name',
+      width: 150,
+      renderCell: (supplier) => supplier.name,
+    },
+    {
+      id: 'address',
+      label: 'Address',
+      width: 200,
+      renderCell: (supplier) => supplier.address,
+    },
+    {
+      id: 'email',
+      label: 'Email',
+      width: 200,
+      renderCell: (supplier) => supplier.email,
+    },
+    {
+      id: 'phone',
+      label: 'Phone',
+      width: 120,
+      renderCell: (supplier) => supplier.phone,
+    }
+  ];
 
   useEffect(() => {
+    setLoading(true);
     fetch("/api/suppliers/list")
-      .then((response) => {
-        return response.json();
-      })
+      .then((response) => response.json())
       .then((data) => {
         setList(data as SupplierListQuery[]);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error fetching suppliers:", error);
+        alert("Attenzione, errore nel recupero dati!");
+        setLoading(false);
       });
   }, []);
 
   return (
-    <>
-      <Typography variant="h4" sx={{ textAlign: "center", mt: 4, mb: 4 }}>
+    <Container maxWidth="xl">
+      <Typography variant="h4" sx={{ p: 2, textAlign: 'center' }}>
         Suppliers
       </Typography>
-
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
-          <TableHead>
-            <TableRow>
-              <StyledTableHeadCell>Name</StyledTableHeadCell>
-              <StyledTableHeadCell>Address</StyledTableHeadCell>
-              <StyledTableHeadCell>Email</StyledTableHeadCell>
-              <StyledTableHeadCell>Phone</StyledTableHeadCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {list.map((row) => (
-              <TableRow
-                key={row.id}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell>{row.name}</TableCell>
-                <TableCell>{row.address}</TableCell>
-                <TableCell>{row.email}</TableCell>
-                <TableCell>{row.phone}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </>
+      <DataTable
+        filteredData={list}
+        columns={columns}
+        keyExtractor={(supplier) => supplier.id}
+        isLoading={loading}
+      />
+    </Container>
   );
 }
-
-const StyledTableHeadCell = styled(TableCell)(({ theme }) => ({
-  [`&.${tableCellClasses.head}`]: {
-    backgroundColor: theme.palette.primary.light,
-    color: theme.palette.common.white,
-  },
-}));
