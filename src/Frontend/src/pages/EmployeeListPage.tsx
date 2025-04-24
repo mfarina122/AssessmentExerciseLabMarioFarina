@@ -104,7 +104,25 @@ export default function EmployeeListPage() {
 
   // Logica di filtro esterno
   useEffect(() => {
-    console.log("TODO: mi servono i filtri")
+    const queryParams = filters
+    .filter((f) => f.value.trim() !== '')
+    .map((f) => `${encodeURIComponent(f.columnId)}=${encodeURIComponent(f.value)}`)
+    .join('&');
+  setLoading(true);
+  const url = queryParams ? `/api/employees/list?${queryParams}` : `/api/employees/list`;
+  fetch(url)
+    .then((response) => {
+      if (!response.ok) throw new Error('Errore nella risposta');
+      return response.json();
+    })
+    .then((data: EmployeeListQuery[]) => {
+      setFilteredList(data);
+      setLoading(false);
+    })
+    .catch((error) => {
+        console.error("Errore durante il filtraggio:", error);
+        setLoading(false);
+    });
   }, [filters]);
 
   return (
@@ -112,16 +130,13 @@ export default function EmployeeListPage() {
       <Typography variant="h4" sx={{ p: 2, textAlign: 'center' }}>
         Employee
       </Typography>
-      {loading ? (
-        <div>Caricamento...</div>
-      ) : (
         <DataTable
           filteredData={filteredList} // Usiamo i dati filtrati
           columns={columns}
           keyExtractor={(employee) => employee.id}
           onFilterChange={setFilters} // Comunica i filtri in uscita
+          isLoading={loading}
         />
-      )}
     </Container>
   );
 }

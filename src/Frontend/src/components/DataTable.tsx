@@ -12,6 +12,9 @@ import {
   TextField,
   tableCellClasses,
   styled,
+  CircularProgress,
+  Backdrop,
+  Typography,
 } from "@mui/material";
 
 export interface Column<T> {
@@ -39,6 +42,7 @@ interface DataTableProps<T> {
   onFilterChange?: (filters: Filter[]) => void, // prop con la funzione di ricerca da usare fuori
   paperProps?: React.ComponentProps<typeof Paper>; //Props del paper che contiene la tabella (fa da container, in modo che lo possa customizzare come voglio se mi servirà)
   tableProps?: React.ComponentProps<typeof Table>; //Props della tabella stessa, per la stessa ragione del paper
+  isLoading?: boolean; // Nuovo prop per indicare se i dati stanno caricando
 }
 
 export function DataTable<T>({
@@ -50,43 +54,70 @@ export function DataTable<T>({
   paperProps,
   onFilterChange,
   tableProps,
+  isLoading = false, // Default a false
 }: DataTableProps<T>) {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
   const [columns, setColumns] = useState<Column<T>[]>(initialColumns);
   const [filters, setFilters] = useState<Filter[]>([]);
   
+  // Nuovo stato per memorizzare i valori temporanei dei filtri prima che vengano applicati
+  const [tempFilters, setTempFilters] = useState<Filter[]>([]);
+  
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
   
-  //Funzione che si occuperà del filtraggio, facendo in modo che i dati vengano tagliati fuori
-  const handleFilterChange = (columnId: string, value: string) => {
-    setFilters((prevFilters) => {
-      const newFilters = prevFilters.some(f => f.columnId === columnId)
+  // Inizializza tempFilters con gli stessi valori di filters quando il componente viene montato
+  useEffect(() => {
+    setTempFilters(filters);
+  }, []);
+  
+  // Funzione che gestisce i cambiamenti temporanei di filtro (senza applicarli)
+  const handleTempFilterChange = (columnId: string, value: string) => {
+    setTempFilters((prevFilters) => {
+      return prevFilters.some(f => f.columnId === columnId)
         ? prevFilters.map(f => f.columnId === columnId ? { ...f, value } : f)
         : [...prevFilters, { columnId, value }];
-      
-      if (onFilterChange) {
-        onFilterChange(newFilters); // comunica all'esterno l'operazione di filtraggio
-      }
-  
-      return newFilters;
     });
   };
+  
+  //Funzione che si occuperà del filtraggio, facendo in modo che i dati vengano tagliati fuori
+  const handleFilterChange = (columnId: string, value: string) => {
+    // Ottieni il valore attuale del filtro per verificare se è cambiato
+    const currentFilterValue = getFilterValue(columnId);
+    
+    // Applica il filtro solo se il valore è effettivamente cambiato
+    if (value !== currentFilterValue) {
+      setFilters((prevFilters) => {
+        const newFilters = prevFilters.some(f => f.columnId === columnId)
+          ? prevFilters.map(f => f.columnId === columnId ? { ...f, value } : f)
+          : [...prevFilters, { columnId, value }];
+        
+        if (onFilterChange) {
+          onFilterChange(newFilters); // comunica all'esterno l'operazione di filtraggio
+        }
+    
+        return newFilters;
+      });
+      
+      // Reset della pagina quando si applica un nuovo filtro
+      setPage(0);
+    }
+  };
+  
   //Funzione che prende il valore del filtering in base all'id della colonna
-
-  const getFilterValue = (columnId: string) => {
-    const filter = filters.find(f => f.columnId === columnId);
+  const getFilterValue = (columnId: string, temp: boolean = false) => {
+    const filterArray = temp ? tempFilters : filters;
+    const filter = filterArray.find(f => f.columnId === columnId);
     return filter ? filter.value : '';
   };
+  
   //Controllo se le colonne sono filtrabili
-
   const filterableColumns = columns.filter(col => col.filterable);
   const hasFilterableColumns = filterableColumns.length > 0;
 
   //Sezione riguardante il resizing delle colonne
-  
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (resizingColumnId !== null) {
@@ -126,7 +157,6 @@ export function DataTable<T>({
   //Fine sezione riguardante il resizing
 
   //Sezione riguardante la paginazione
-
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -135,13 +165,28 @@ export function DataTable<T>({
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
-
   //Fine della sezione paginazione
-  
- 
 
   return (
-    <Paper {...paperProps}>
+    <Paper {...paperProps} sx={{ position: 'relative', ...paperProps?.sx }}>
+      {/* Unico indicatore di caricamento centrale con messaggio "Ricerca in corso" */}
+      <Backdrop
+        sx={{
+          position: 'absolute',
+          color: '#fff',
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        }}
+        open={isLoading}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <CircularProgress color="inherit" />
+          <Typography variant="h6" component="div" color="inherit">
+            Ricerca in corso...
+          </Typography>
+        </Box>
+      </Backdrop>
+      
       <TableContainer>
         <Table sx={{ minWidth: 650, ...tableProps?.sx }} {...tableProps}>
           <TableHead>
@@ -188,11 +233,31 @@ export function DataTable<T>({
                         <Box>
                           <TextField
                             placeholder="Filtra..."
-                            value={getFilterValue(column.id)}
-                            onChange={(e) => handleFilterChange(column.id, e.target.value)}
+                            value={getFilterValue(column.id, true)} // Usa i valori temporanei per l'input
+                            onChange={(e) => handleTempFilterChange(column.id, e.target.value)} // Aggiorna solo i valori temporanei
+                            onBlur={(e) => {
+                              // Verifica se il valore è cambiato rispetto al filtro attuale prima di applicarlo
+                              const newValue = e.target.value;
+                              const currentValue = getFilterValue(column.id);
+                              if (newValue !== currentValue) {
+                                handleFilterChange(column.id, newValue);
+                              }
+                            }} 
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const newValue = (e.target as HTMLInputElement).value;
+                                const currentValue = getFilterValue(column.id);
+                                // Verifica se il valore è cambiato prima di applicare il filtro
+                                if (newValue !== currentValue) {
+                                  handleFilterChange(column.id, newValue);
+                                }
+                              }
+                            }}
                             size="small"
                             fullWidth
                             variant="outlined"
+                            // Disabilita l'input durante il caricamento
+                            disabled={isLoading}
                           />
                         </Box>
                       ) : null}
@@ -223,7 +288,8 @@ export function DataTable<T>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center" sx={{ py: 3 }}>
-                  Dati non trovati
+                  {/* Mostro un messaggio diverso in base allo stato di caricamento */}
+                  {isLoading ? '' : 'Dati non trovati'}
                 </TableCell>
               </TableRow>
             )}
@@ -238,6 +304,8 @@ export function DataTable<T>({
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        // Disabilita la paginazione durante il caricamento
+        disabled={isLoading}
       />
     </Paper>
   );
