@@ -49,7 +49,7 @@ export function DataTable<T>({
   filteredData,
   columns: initialColumns,
   keyExtractor,
-  defaultRowsPerPage = 5,
+  defaultRowsPerPage = 10,
   rowsPerPageOptions = [5, 10, 25, 50, 100],
   paperProps,
   onFilterChange,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Container, Typography } from "@mui/material";
-import { DataTable, Column } from "../components/DataTable"; // Aggiusta il percorso in base alla tua struttura
+import { Button, Container, Typography } from "@mui/material";
+import { DataTable, Column } from "../components/DataTable"; 
+import { js2xml } from 'xml-js';
 
 interface department {
   code: string;
@@ -20,6 +21,42 @@ interface EmployeeListQuery {
 interface Filter {
   columnId: string;
   value: string;
+}
+
+function downloadXmlFile(data: EmployeeListQuery[], filename: string) {
+  //Creiamo l'insieme dei dati da trasformare in XML, iterando su di essi e specificando i tipi e i dati
+  const formattedData = {
+    elements: data.map(employee => ({
+      type: 'element',
+      name: 'employee',
+      elements: [
+        { type: 'element', name: 'id', elements: [{ type: 'text', text: employee.id.toString() }] },
+        { type: 'element', name: 'code', elements: [{ type: 'text', text: employee.code }] },
+        { type: 'element', name: 'firstName', elements: [{ type: 'text', text: employee.firstName }] },
+        { type: 'element', name: 'lastName', elements: [{ type: 'text', text: employee.lastName }] },
+        { type: 'element', name: 'address', elements: [{ type: 'text', text: employee.address }] },
+        { type: 'element', name: 'email', elements: [{ type: 'text', text: employee.email }] },
+        { type: 'element', name: 'phone', elements: [{ type: 'text', text: employee.phone }] },
+        {
+          type: 'element',
+          name: 'department',
+          elements: [
+            { type: 'element', name: 'code', elements: [{ type: 'text', text: employee.department?.code || '' }] },
+            { type: 'element', name: 'description', elements: [{ type: 'text', text: employee.department?.description || '' }] }
+          ]
+        }
+      ]
+    }))
+  };
+  //Invochiamo js2xml dalla libreria
+  const xml = js2xml({ elements: [{ type: 'element', name: 'employees', elements: formattedData.elements }] }, { compact: false, spaces: 2 });
+
+  const blob = new Blob([xml], { type: 'application/xml' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 export default function EmployeeListPage() {
@@ -130,6 +167,17 @@ export default function EmployeeListPage() {
       <Typography variant="h4" sx={{ p: 2, textAlign: 'center' }}>
         Employee
       </Typography>
+      <div style={{display:"flex",flexDirection:"row",justifyContent:"center"}}>
+      <Button 
+  variant="contained" 
+  color="primary" 
+  sx={{ mb: 2 }}
+  onClick={() => {
+    downloadXmlFile(filteredList,'employees.xml');
+  }}
+>
+  Esporta XML
+</Button></div>
         <DataTable
           filteredData={filteredList} // Usiamo i dati filtrati
           columns={columns}
