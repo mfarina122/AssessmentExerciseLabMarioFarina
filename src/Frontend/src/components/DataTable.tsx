@@ -72,6 +72,13 @@ export function DataTable<T>({
   useEffect(() => {
     setTempFilters(filters);
   }, []);
+
+  //Messo nello useEffect l'esecuzione dell'onfilterChange, poichè c'era un problema quando veniva settato lo stato e dunque è stato spostato in uno useEffect dipendente dai filtri
+  useEffect(() => {
+      if (onFilterChange) {
+        onFilterChange(filters);
+      }
+  }, [filters, onFilterChange]);
   
   // Funzione che gestisce i cambiamenti temporanei di filtro (senza applicarli)
   const handleTempFilterChange = (columnId: string, value: string) => {
@@ -93,10 +100,6 @@ export function DataTable<T>({
         const newFilters = prevFilters.some(f => f.columnId === columnId)
           ? prevFilters.map(f => f.columnId === columnId ? { ...f, value } : f)
           : [...prevFilters, { columnId, value }];
-        
-        if (onFilterChange) {
-          onFilterChange(newFilters); // comunica all'esterno l'operazione di filtraggio
-        }
     
         return newFilters;
       });
