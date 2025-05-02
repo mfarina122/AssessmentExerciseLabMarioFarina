@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Container, Typography } from "@mui/material";
 import { DataTable, Column } from "../components/DataTable";
+import { Snackbar, Alert } from "@mui/material";
+
 
 interface SupplierListQuery {
   id: number;
@@ -13,6 +15,9 @@ interface SupplierListQuery {
 export default function SupplierListPage() {
   const [list, setList] = useState<SupplierListQuery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
 
   // Definizione delle colonne per la DataTable
   const columns: Column<SupplierListQuery>[] = [
@@ -52,7 +57,8 @@ export default function SupplierListPage() {
       })
       .catch((error) => {
         console.error("Error fetching suppliers:", error);
-        alert("Attenzione, errore nel recupero dati!");
+        setSnackbarMessage("Attenzione, errore nel recupero dati!");
+        setSnackbarOpen(true);
         setLoading(false);
       });
   }, []);
@@ -68,6 +74,16 @@ export default function SupplierListPage() {
         keyExtractor={(supplier) => supplier.id}
         isLoading={loading}
       />
+      <Snackbar
+  open={snackbarOpen}
+  autoHideDuration={6000}
+  onClose={() => setSnackbarOpen(false)}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+>
+  <Alert onClose={() => setSnackbarOpen(false)} severity="error" sx={{ width: '100%' }}>
+    {snackbarMessage}
+  </Alert>
+</Snackbar>
     </Container>
   );
 }

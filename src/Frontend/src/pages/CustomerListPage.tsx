@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Button, Container, Typography } from "@mui/material";
 import { DataTable, Column } from "../components/DataTable";
 import { js2xml } from 'xml-js';
+import { Snackbar, Alert } from "@mui/material";
+
 
 interface customerCategory {
     code: string;
@@ -62,6 +64,9 @@ export default function CustomerListPage() {
     const [filteredList, setFilteredList] = useState<CustomerListQuery[]>([]);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
 
   const columns: Column<CustomerListQuery>[] = [
     {
@@ -117,7 +122,8 @@ export default function CustomerListPage() {
       })
       .catch((error) => {
         console.error("Error fetching customers:", error);
-        alert("Attenzione, errore nel recupero dati!");
+        setSnackbarMessage("Attenzione, errore nel recupero dati!");
+        setSnackbarOpen(true);
         setLoading(false);
       });
   }, []);
@@ -141,7 +147,8 @@ export default function CustomerListPage() {
     })
     .catch((error) => {
         console.error("Errore durante il filtraggio:", error);
-        alert("Errore durante il filtraggio")
+        setSnackbarMessage("Attenzione, errore durante il filtraggio!");
+        setSnackbarOpen(true);
         setLoading(false);
     });
   }, [filters]);
@@ -169,6 +176,16 @@ export default function CustomerListPage() {
           onFilterChange={setFilters} // Comunica i filtri in uscita
           isLoading={loading}
         />
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
+          onClose={() => setSnackbarOpen(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert onClose={() => setSnackbarOpen(false)} severity="error" sx={{ width: '100%' }}>
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
     </Container>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Container, Typography } from "@mui/material";
 import { DataTable, Column } from "../components/DataTable"; 
 import { js2xml } from 'xml-js';
+import { Snackbar, Alert } from "@mui/material";
 
 interface department {
   code: string;
@@ -63,6 +64,8 @@ export default function EmployeeListPage() {
   const [filteredList, setFilteredList] = useState<EmployeeListQuery[]>([]);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const columns: Column<EmployeeListQuery>[] = [
     {
@@ -134,7 +137,8 @@ export default function EmployeeListPage() {
       })
       .catch((error) => {
         console.error("Error fetching employees:", error);
-        alert("Attenzione, errore nel recupero dati!");
+        setSnackbarMessage("Attenzione, errore nel recupero dati!");
+        setSnackbarOpen(true);
         setLoading(false);
       });
   }, []);
@@ -185,6 +189,16 @@ export default function EmployeeListPage() {
           onFilterChange={setFilters} // Comunica i filtri in uscita
           isLoading={loading}
         />
+        <Snackbar
+  open={snackbarOpen}
+  autoHideDuration={6000}
+  onClose={() => setSnackbarOpen(false)}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+>
+  <Alert onClose={() => setSnackbarOpen(false)} severity="error" sx={{ width: '100%' }}>
+    {snackbarMessage}
+  </Alert>
+</Snackbar>
     </Container>
   );
 }
